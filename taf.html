@@ -1,6 +1,7 @@
 ﻿<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title></title>
     <style>
@@ -8,7 +9,7 @@
             clear: both;
         }
 
-        .prev, .next, .num, .pend, .pfirst,.hasnumfirst,.hasnumend {
+        .prev, .next, .num, .pend, .pfirst, .hasnumfirst, .hasnumend {
             border: 1px solid #ccc;
             border-radius: 4px;
             display: inline-block;
@@ -23,7 +24,7 @@
             margin: 0 0 0 2px;
         }
 
-            .prev:hover, .next:hover, .pend:hover, .pfirst:hover,.hasnumfirst:hover,.hasnumend:hover {
+            .prev:hover, .next:hover, .pend:hover, .pfirst:hover, .hasnumfirst:hover, .hasnumend:hover {
                 background-color: #445fca;
                 color: #fff;
                 cursor: pointer;
@@ -84,15 +85,17 @@
 </body>
 </html>
 <script src="/assets/js/jquery-2.1.3.js"></script>
+<!--分页代码-->
 <script>
     var pConfig = {
-        numCount: 5,//数字按钮个数，至少3个，最多少于总页数
+        numCount: 5,//数字按钮个数，至少3个，最多少于总页数，如果小于3，将不显示数字按钮
         hasnum: true,//是否有前面前面是否页码的指示按钮
         haspfirst: true,//是否有首页按钮
         haspend: true,//是否有尾页按钮
         hasnext: true,//是否有下页按钮
         hasprev: true,//是否有上一页按钮
-        pTotal:0,//总页数
+        pTotal: 0,//总页数
+        urlindex:"",//用户传入的urlindex参数
     };
     //生成页码
     (function ($) {
@@ -102,6 +105,7 @@
         //
         $.fn.myRenderPage = function (totalPages, current, showcount, urlindex, urllast) {
             pConfig.pTotal = totalPages;
+            pConfig.urlindex = urlindex;
             var url = urlindex + urllast;
             //'<a url="" class="pfirst">首页</a>'+
             //            '<a url="" class="prev">上一页</a>'+
@@ -109,16 +113,40 @@
             //            '<a url="" class="hasnum">...</a>'+
             //'<a url="" class="next">下一页</a>'+
             //'<a url="" class="pend">尾页</a>'+
-            var pagediv=$(
+            var endDef = 3;//默认3个数字按钮的最后一个数字按钮的值
+            var pagediv = $(
                     '<div class="pagediv">' +
-                        '<a url="" class="num numClick">1</a>'+
-                        '<a url="" class="num">2</a>' +
-                        '<a url="" class="num">3</a>' +
-                        '<a url="" class="num">4</a>' +
                     '</div>');
+            //加载默认的3个按钮
+            var len = 3;
+            if (pConfig.numCount >= 3) {
+                len = pConfig.numCount;
+            }
+            for (var i = 0; i < pConfig.numCount; i++) {
+                var curr = current + i - 1;
+                if (current == 1) {
+                    curr += 1;
+                }
+                var url = urlindex + curr;
+                var classVal = "";
+                if (curr == current) {
+                    classVal = "num numClick";
+                } else {
+                    classVal = "num";
+                }
+                if (curr > pConfig.pTotal) {
+                    classVal += " pDisabled";
+                }
+                pagediv.append(
+                    '<a url="' + url + '" class="' + classVal + '">' + curr + '</a>'
+                    );
+            }
+            if (pConfig.numCount < 3) {
+                pagediv.children('.num,.hasnum').css('display', 'none');
+            }
             if (pConfig.hasnum) {
-                pagediv.prepend('<a url="" class="hasnumfirst pDisabled">...</a>');
-                pagediv.append('<a url="" class="hasnumend">...</a>');
+                pagediv.prepend('<a url="" class="hasnum hasnumfirst pDisabled">...</a>');
+                pagediv.append('<a url="" class="hasnum hasnumend">...</a>');
             }
             if (pConfig.hasprev) {
                 pagediv.prepend('<a url="" class="prev pDisabled">上一页</a>');
@@ -138,8 +166,9 @@
     })(jQuery);
 
     ////////////////////////////////
+    ///this2是当前点击事件对象所对应的数据按钮对象
     function pageClick(this2, this1) {
-        if ($(this2).hasClass('pDisabled') || $(this2).text() > pConfig.pTotal || ($(this2).text() == pConfig.pTotal && $(this2).hasClass('numClick'))) {
+        if (parseInt($(this2).text()) < 1 || $(this2).length <= 0 || $(this2).hasClass('pDisabled') || $(this2).text() > pConfig.pTotal || ($(this2).text() == pConfig.pTotal && $(this2).hasClass('numClick'))) {
             return false;
         }
         $(this2).addClass('numClick');
@@ -153,41 +182,45 @@
         }
         var currNums = $(this2).parent().children('.num');//当前点击的数字按钮的其他同胞数字按钮,包含自身
         var len = currNums.length;
-        if ($(this2).next('.num').length<=0) {//点击最后一个数字按钮
+        var temp = parseInt($(this2).text());
+        if ($(this2).next('.num').length <= 0) {//如果点击的是最后一个数字按钮
             for (var i = 0; i < len; i++) {
-                var temp = parseInt(currNums[i].innerHTML);
-                currNums[i].innerHTML = temp + 1;
+                var tempVal=temp - len + i + 2
+                currNums[i].innerHTML = tempVal;
+                $(currNums[i]).attr('url', pConfig.urlindex + tempVal);
             }
             //if (!$(this2).siblings().hasClass('hasnumfirst')) {
             //    sublingNum.first().before('<a url="" class="hasnumfirst">...</a>');
             //}
             $(this2).prev().addClass('numClick');
             $(this2).removeClass('numClick');
-            temp=parseInt($(this2).text());
-            if (temp>pConfig.pTotal) {//超出最大页码，则禁用按钮(只是用户看起来像禁用，并不是真的禁用)
+            if (temp >= pConfig.pTotal) {//超出最大页码，则禁用按钮(只是用户看起来像禁用，并不是真的禁用)
                 $(this2).addClass('pDisabled');
+                $(this2).next('.num').addClass('pDisabled');
                 $('.next').addClass('pDisabled');
             }
-        } else if ($(this2).prev('.num').length <= 0) {//点击第一个数字按钮
-            if ($(this2).text()=='1') {
+        } else if ($(this2).prev('.num').length <= 0) {//如果点击的是第一个数字按钮
+            if ($(this2).text() == '1') {
                 $('.prev').addClass('pDisabled');
-                $('.hasnumend').addClass('pDisabled');
                 $('.hasnumfirst').addClass('pDisabled');
-                return;
+                return true;
             }
             for (var i = 0; i < len; i++) {
-                var temp = parseInt(currNums[i].innerHTML);
-                currNums[i].innerHTML = temp - 1;
+                var tempVal=temp + i - 1
+                currNums[i].innerHTML = tempVal;
+                $(currNums[i]).attr('url', pConfig.urlindex + tempVal);
             }
             $(this2).next().addClass('numClick');
             $(this2).removeClass('numClick');
-            
+
         }
         return true;
     }
 
+    //异步的的数据请求
+    //this2是当前点击事件的对象
     function pageData(this2, context) {
-        document.title = Math.random();
+        document.title = $(this2).parent().children('.numClick').attr('url');
         //$.ajax(
         //        {
         //            url: $(this2).attr('url'),
@@ -204,19 +237,25 @@
         //        });
     }
 
-    //this2：这里用于在页面使用多个分页里不产生冲突
+    //this1：这里用于在页面使用多个分页时防止冲突
+    //注册分页按钮点击事件
     function pageClickReg(this1) {
         $(this1).children('.num').click(function () {
-            if(pageClick(this,this1))
-            pageData(this);
+            if (pageClick(this, this1)) {
+                pageData(this);
+            }
         });
         $(this1).children('.next').click(function () {
-            if(pageClick($(this).siblings('.numClick').next('.num')))
-            pageData(this);
+            var this2 = $(this).siblings('.numClick').next('.num');
+            if (pageClick(this2)) {
+                pageData(this2);
+            }
         });
         $(this1).children('.prev').click(function () {
-            if (pageClick($(this).siblings('.numClick').prev('.num')));
-            pageData(this);
+            var this2=$(this).siblings('.numClick').prev('.num');
+            if (pageClick(this2)){
+                pageData(this2);
+            }
         });
         $(this1).children('.pend').click(function () {
             pageData(this);
@@ -228,12 +267,22 @@
 
         });
         $(this1).children('.hasnumend').click(function () {
-
+            var firsNum = $('.num').first();
+            firsNum.text(1);
+            if (pageClick(firsNum));
         });
     }
     //$('.num')
 </script>
+<!--分页代码-->
+<!--调用示例-->
 <script>
-    $('#page-box').myRenderPage(6, 1, 4);
-    $('#page-box').myRenderPage(6, 1, 4);
+    ///示例1
+    var urlindex = "/home/page/";
+    $('#page-box').myRenderPage(6, 1, 4, urlindex);//对应的请求url就是("/home/page/1")
+
+    ///示例2：目前版本示例2无效，第2个参数只能是1
+    var urlindex2 = "/home/page?pageId=";
+    $('#page-box').myRenderPage(6, 3, 4, urlindex2);//对应的请求url就是("/home/page/3")
 </script>
+<!--调用示例-->
